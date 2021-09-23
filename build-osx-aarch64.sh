@@ -2,44 +2,38 @@
 
 set -e
 
-JDK_VER="11.0.8"
-JDK_BUILD="10"
+JDK_VER="17"
+JDK_BUILD="35"
 PACKR_VERSION="runelite-1.0"
 
 SIGNING_IDENTITY="Developer ID Application"
 ALTOOL_USER="user@icloud.com"
 ALTOOL_PASS="@keychain:altool-password"
 
-FILE=OpenJDK17-jre_aarch64_mac_hotspot_2021-09-14-09-41.tar.gz
-URL=https://github.com/adoptium/temurin17-binaries/releases/download/jdk17-2021-09-14-09-41-beta/OpenJDK17-jre_aarch64_mac_hotspot_2021-09-14-09-41.tar.gz
+FILE="OpenJDK17-jdk_aarch64_mac_hotspot_${JDK_VER}_${JDK_BUILD}.tar.gz"
+URL="https://github.com/adoptium/temurin17-binaries/releases/download/jdk-${JDK_VER}%2B${JDK_BUILD}/${FILE}"
 
-if ! [ -f $FILE ] ; then
-	curl -Lo $FILE $URL
+if ! [ -f ${FILE} ] ; then
+    curl -Lo ${FILE} ${URL}
 fi
-#if ! [ -f OpenJDK11U-jre_x64_mac_hotspot_${JDK_VER}_${JDK_BUILD}.tar.gz ] ; then
-#    curl -Lo OpenJDK11U-jre_x64_mac_hotspot_${JDK_VER}_${JDK_BUILD}.tar.gz \
-#        https://github.com/AdoptOpenJDK/openjdk11-binaries/releases/download/jdk-${JDK_VER}%2B${JDK_BUILD}/OpenJDK11U-jre_x64_mac_hotspot_${JDK_VER}_${JDK_BUILD}.tar.gz
-#fi
 
-#echo "b0cd349e7e428721a3bcfec619e071d25c0397e3e43b7ce22acfd7d834a8ca4b  OpenJDK11U-jre_x64_mac_hotspot_${JDK_VER}_${JDK_BUILD}.tar.gz" | shasum -c
-
+echo "910bb88543211c63298e5b49f7144ac4463f1d903926e94a89bfbf10163bbba1  ${FILE}" | shasum -c
 
 # packr requires a "jdk" and pulls the jre from it - so we have to place it inside
 # the jdk folder at jre/
 if ! [ -d osx-aarch64-jdk ] ; then
+    # Extract jdk archive
     tar zxf $FILE
-    mkdir osx-aarch64-jdk
-    mv jdk-17+35-jre osx-aarch64-jdk/jre
-    #tar zxf OpenJDK11U-jre_x64_mac_hotspot_${JDK_VER}_${JDK_BUILD}.tar.gz
-    #mkdir osx-jdk
-    #mv jdk-${JDK_VER}+${JDK_BUILD}-jre osx-jdk/jre
 
-    pushd osx-aarch64-jdk/jre
-    # Move JRE out of Contents/Home/
-    mv Contents/Home/* .
-    # Remove unused leftover folders
-    rm -rf Contents
-    popd
+    # Create jre
+    jdk-${JDK_VER}+${JDK_BUILD}/Contents/Home/bin/jlink \
+        --add-modules java.base,java.datatransfer,java.desktop,java.logging,java.management \
+        --add-modules java.naming,java.net.http,java.sql,java.xml\
+        --add-modules jdk.crypto.ec,jdk.httpserver,jdk.unsupported\
+        --output osx-aarch64-jdk/jre
+
+    # Cleanup
+    rm -rf jdk-${JDK_VER}+${JDK_BUILD}
 fi
 
 #if ! [ -f packr_${PACKR_VERSION}.jar ] ; then
@@ -60,11 +54,13 @@ pushd native-osx-aarch64/RuneLite.app
 chmod g+x,o+x Contents/MacOS/RuneLite
 popd
 
-#codesign -f -s "${SIGNING_IDENTITY}" --entitlements osx/signing.entitlements --options runtime native-osx-aarch64/RuneLite.app || true
+codesign -f -s "${SIGNING_IDENTITY}" --entitlements osx/signing.entitlements --options runtime native-osx-aarch64/RuneLite.app || true
 
 # create-dmg exits with an error code due to no code signing, but is still okay
 create-dmg native-osx-aarch64/RuneLite.app native-osx-aarch64/ || true
 
-mv native-osx-aarch64/RuneLite\ *.dmg RuneLite-aarch64.dmg
+mv native-osx-aarch64/RuneLite\ *.dmg native-osx-aarch64/RuneLite-aarch64.dmg
 
-#xcrun altool --notarize-app --username "${ALTOOL_USER}" --password "${ALTOOL_PASS}" --primary-bundle-id runelite --file RuneLite-aarch64.dmg || true
+xcrun altool --notarize-app --username "${ALTOOL_USER}" --password "${ALTOOL_PASS}" --primary-bundle-id runelite --file native-osx-aarch64/RuneLite-aarch64.dmg || true
+
+#xcrun stapler staple native-osx-aarch64/RuneLite-aarch64.dmg
