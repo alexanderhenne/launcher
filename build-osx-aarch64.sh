@@ -4,7 +4,7 @@ set -e
 
 JDK_VER="17"
 JDK_BUILD="35"
-PACKR_VERSION="runelite-1.0"
+PACKR_VERSION="runelite-1.2"
 
 SIGNING_IDENTITY="Developer ID Application"
 ALTOOL_USER="user@icloud.com"
@@ -30,21 +30,22 @@ if ! [ -d osx-aarch64-jdk ] ; then
         --add-modules java.base,java.datatransfer,java.desktop,java.logging,java.management \
         --add-modules java.naming,java.net.http,java.sql,java.xml\
         --add-modules jdk.crypto.ec,jdk.httpserver,jdk.unsupported\
+        --add-modules jdk.random,jdk.net,jdk.crypto.cryptoki,jdk.accessibility\
+        --add-modules jdk.charsets,java.prefs,jdk.unsupported.desktop\
         --output osx-aarch64-jdk/jre
 
     # Cleanup
     rm -rf jdk-${JDK_VER}+${JDK_BUILD}
 fi
 
-#if ! [ -f packr_${PACKR_VERSION}.jar ] ; then
-#    curl -Lo packr_${PACKR_VERSION}.jar \
-#        https://github.com/runelite/packr/releases/download/${PACKR_VERSION}/packr.jar
-#fi
+if ! [ -f packr_${PACKR_VERSION}.jar ] ; then
+    curl -Lo packr_${PACKR_VERSION}.jar \
+        https://github.com/runelite/packr/releases/download/${PACKR_VERSION}/packr.jar
+fi
 
-#echo "18b7cbaab4c3f9ea556f621ca42fbd0dc745a4d11e2a08f496e2c3196580cd53  packr_${PACKR_VERSION}.jar" | shasum -c
+echo "6552d1e9c86250d84d6f485575d5a20246431984  packr_${PACKR_VERSION}.jar" | shasum -c
 
-#java -jar packr_${PACKR_VERSION}.jar
-java -jar packr-2.1-SNAPSHOT-jar-with-dependencies.jar \
+java -jar packr_${PACKR_VERSION}.jar \
 	macos-aarch64-config.json
 
 cp target/filtered-resources/Info.plist native-osx-aarch64/RuneLite.app/Contents
